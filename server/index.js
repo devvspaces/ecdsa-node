@@ -2,14 +2,16 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
+const { verifySignature } = require("./services")
+
 
 app.use(cors());
 app.use(express.json());
 
 const balances = {
-  "0x1": 100,
-  "0x2": 50,
-  "0x3": 75,
+  "5f037e0f886cc6033cd840b21525dc3aa0f521de": 100,
+  "cebaf24c5ff4154765666b583dde5de6ca44933e": 50,
+  "beb2e1d5fc1656f0da184a12279f07b40e23ffc2": 75,
 };
 
 app.get("/balance/:address", (req, res) => {
@@ -19,7 +21,17 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { sender, recipient, amount } = req.body;
+  const { sender, recipient, amount, signature } = req.body;
+
+  const msg = JSON.stringify({
+    recipient,
+    amount
+  })
+  let isValid = verifySignature(signature, msg, sender);
+  if (isValid === false){
+    res.status(400).send({ message: "Invalid Signature!" })
+    return
+  }
 
   setInitialBalance(sender);
   setInitialBalance(recipient);

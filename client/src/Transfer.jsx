@@ -1,5 +1,6 @@
 import { useState } from "react";
 import server from "./server";
+import { hashMessage } from "./services"
 
 function Transfer({ address, setBalance }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -7,25 +8,42 @@ function Transfer({ address, setBalance }) {
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
-  async function transfer(evt) {
+  async function getSignature(evt){
     evt.preventDefault();
 
     try {
-      const {
-        data: { balance },
-      } = await server.post(`send`, {
-        sender: address,
-        amount: parseInt(sendAmount),
+      let data = {
         recipient,
-      });
-      setBalance(balance);
+        amount: parseInt(sendAmount)
+      }
+      let msgHex = await hashMessage(JSON.stringify(data))
+      let signature = prompt(`Sign message (${msgHex}) and provide signature:`)
+      if (signature === null){
+        alert("You did not provided a signature")
+        return
+      }
+      await transfer(signature)
     } catch (ex) {
       alert(ex.response.data.message);
     }
+
+  }
+
+  async function transfer(signature) {
+    const {
+      data: { balance },
+    } = await server.post(`send`, {
+      sender: address,
+      amount: parseInt(sendAmount),
+      recipient,
+      signature,
+    });
+    setBalance(balance);
+    alert("Funds transferred successfully!")
   }
 
   return (
-    <form className="container transfer" onSubmit={transfer}>
+    <form className="container transfer" onSubmit={getSignature}>
       <h1>Send Transaction</h1>
 
       <label>
